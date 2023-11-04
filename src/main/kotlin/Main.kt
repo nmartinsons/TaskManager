@@ -119,11 +119,7 @@ fun main() {
                         val description = readLine() ?: ""
                         print("Due Date (dd-MM-yyyy): ")
                         val dueDateStr = readLine() ?: ""
-                        val dueDate = try {
-                            SimpleDateFormat("dd-MM-yyyy").parse(dueDateStr)
-                        } catch (e: Exception) {
-                            null
-                        }
+                        val dueDate = SimpleDateFormat("dd-MM-yyyy").parse(dueDateStr)
                         print("Priority: ")
                         val priority = readLine()?.toIntOrNull() ?: 0
                         print("Status: ")
