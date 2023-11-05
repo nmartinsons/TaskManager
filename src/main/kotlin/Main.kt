@@ -3,7 +3,7 @@
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class Task(
+data class Task( //defined data class.
     val title: String,
     val description: String,
     val dueDate: Date,
@@ -12,24 +12,26 @@ data class Task(
 )
 
 class TaskManager {
-    val tasks = mutableListOf<Task>()
+    val tasks = mutableListOf<Task>() //manages a list of tasks using a MutableList.
 
-    var taskCreated = false
+    var taskCreated = false //created to track whether any tasks have been created.
 
+    //adds new task to the list.
     fun createTask(title: String, description: String, dueDate: Date, priority: Int, status: String) {
         val task = Task(title, description, dueDate, priority, status)
         tasks.add(task)
-        taskCreated = true
+        taskCreated = true //taskCreated value is changed to true because task has been created.
     }
 
+    //displays the list of tasks, if no task has been created, the following message is printed out.
     fun viewTasks() {
         if (tasks.isEmpty()) {
             println()
             println("NO TASKS HAVE BEEN CREATED. CREATE TASKS FIRST!")
             println()
         } else {
-            for ((index, task) in tasks.withIndex()) {
-                println("Task: ${index + 1}")
+            for ((index, task) in tasks.withIndex()) { //withIndex() is an extension function on lists that pairs each element with its index.
+                println("Task ${index + 1}.") //starts at index 1. to make it more user-friendly.
                 println("Title: ${task.title}")
                 println("Description: ${task.description}")
                 println("Due Date: ${task.dueDate}")
@@ -40,41 +42,43 @@ class TaskManager {
         }
     }
 
+    //modifies task details.
     fun updateTask(index: Int, title: String, description: String, dueDate: Date, priority: Int, status: String) {
-        if (index >= 0 && index < tasks.size) {
-            tasks[index] = Task(title, description, dueDate, priority, status)
+        if (index >= 0 && index < tasks.size) { //the function checks if the provided index is within the valid range for the tasks list. It checks if index is greater than or equal to 0 and less than tasks.size, to ensure the index is within the bounds of the list.
             println("Task updated successfully!")
         } else {
             println("Task does not exist")
         }
     }
 
+    //removes tasks from the list by specifying task index.
     fun deleteTask(index: Int) {
         if (index >= 0 && index < tasks.size) {
-            tasks.removeAt(index)
+            tasks.removeAt(index) //removes tasks at specified index by user
             println("Task deleted successfully!")
-        } else {
+        } else {// //if the provided index is out of range, the following message is printed out
             println("Task does not exist.")
         }
     }
 
+    //sorts task by due dates in ascending order.
     fun sortByDueDate() {
-        if (tasks.isEmpty()) {
+        if (tasks.isEmpty()) { //if no tasks has been created, the following message is printed out
             println()
             println("NO TASKS HAVE BEEN CREATED. CREATE TASKS FIRST!")
             println()
-        } else {
-            tasks.sortBy { it.dueDate }
+        } else { //if there are tasks in the list, they are sorted by due date
+            tasks.sortBy { it.dueDate } //this function will sort the tasks in ascending order based on their due dates.
             println("Tasks sorted by due date:")
         }
     }
 }
 
 fun main() {
-    val taskManager = TaskManager()
+    val taskManager = TaskManager() //this line creates an instance of the TaskManager class, which will be used to manage tasks.
 
-    while (true) {
-        println("Task Manager Menu. Choose one option below:")
+    while (true) { //this continues running until the user explicitly chooses to exit the program by choosing option 6.
+        println("Task Manager Menu. Choose one option below:") //menu is displayed to the user.
         println("1. Create Task")
         println("2. View Tasks")
         println("3. Update Task")
@@ -83,18 +87,18 @@ fun main() {
         println("6. Exit")
         print("Enter your choice: ")
 
-        when (readLine()) {
-            "1" -> {
+        when (readLine()) { //the user's choice is read using readLine()
+            "1" -> { //choice 1 to create task
                 println("Enter task details:")
                 print("Title: ")
-                val title = readLine() ?: ""
+                val title = readLine() ?: "" //Elvis operator, which provides a default value in case the value on the left is null. In this case, if the conversion to an integer fails, it will be replaced with the default value of 0.
                 print("Description: ")
                 val description = readLine() ?: ""
                 print("Due Date (dd-MM-yyyy): ")
                 val dueDateString = readLine() ?: ""
                 val dueDate = SimpleDateFormat("dd-MM-yyyy").parse(dueDateString)
                 print("Priority: ")
-                val priority = readLine()?.toIntOrNull() ?: 0
+                val priority = readLine()?.toIntOrNull() ?: 0 //coverts string to integer, if string is not valid. If the conversion fails index will be assigned null. Elvis operator provides default value -1
                 print("Status: ")
                 val status = readLine() ?: ""
                 if (title.isNotBlank() && description.isNotBlank() && dueDate != null) {
@@ -104,14 +108,14 @@ fun main() {
                     println("Invalid input. Task creation failed.")
                 }
             }
-            "2" -> {
+            "2" -> { //choice 2 to view tasks
                 taskManager.viewTasks()
             }
-            "3" -> {
+            "3" -> { //choice 3 to update task
                 if (taskManager.taskCreated) {
                     print("Enter the index of the task to update: ")
                     val index = readLine()?.toIntOrNull() ?: -1
-                    if (index in 1..taskManager.tasks.size) {
+                    if (index in 1..taskManager.tasks.size) { //in operator checks if the value of index is within the range of valid indices.
                         println("Enter task details:")
                         print("Title: ")
                         val title = readLine() ?: ""
@@ -138,12 +142,12 @@ fun main() {
                     println()
                 }
             }
-            "4" -> {
+            "4" -> { //choice 4 to delete task
                 if (taskManager.taskCreated) {
                     print("Enter the index of the task to delete: ")
                     val index = readLine()?.toIntOrNull() ?: -1
                     if (index in 1..taskManager.tasks.size) {
-                        taskManager.deleteTask(index - 1)
+                        taskManager.deleteTask(index - 1) //-1 to set back index starting at 0
                         println("Task deleted successfully!")
                     } else {
                         println("Invalid index. Task deletion failed.")
@@ -154,14 +158,14 @@ fun main() {
                     println()
                 }
             }
-            "5" -> {
+            "5" -> { //choice 5 to sort tasks
                 taskManager.sortByDueDate()
                 taskManager.viewTasks()
             }
-            "6" -> {
+            "6" -> { //exit option, it terminates the program
                 return
             }
-            else -> {
+            else -> { //if no 1,2,3,4,5,6 option is typed, the following message is printed out.
                 println("Invalid command. Try one more time.")
             }
         }
