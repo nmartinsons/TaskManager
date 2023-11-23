@@ -1,5 +1,8 @@
 //Niks Niklāvs Martinsons 221RDB485
 
+import java.sql.Connection
+import java.sql.DriverManager
+import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -11,7 +14,7 @@ data class Task( //defined data class.
     var status: String
 )
 
-class TaskManager {
+class TaskManager(private val connection: Connection) {
     val tasks = mutableListOf<Task>() //manages a list of tasks using a MutableList.
 
     var taskCreated = false //created to track whether any tasks have been created.
@@ -21,6 +24,44 @@ class TaskManager {
         val task = Task(title, description, dueDate, priority, status)
         tasks.add(task)
         taskCreated = true //taskCreated value is changed to true because task has been created.
+        insertTaskToDatabase(task) // Insert the task into the database
+    }
+
+    // Retrieve tasks from the database
+    private fun retrieveTasksFromDatabase(): List<Task> {
+        val tasks = mutableListOf<Task>()
+        val selectSQL = "SELECT * FROM tasks"
+        try {
+            val preparedStatement = connection.prepareStatement(selectSQL)
+            val resultSet: ResultSet = preparedStatement.executeQuery()
+            while (resultSet.next()) {
+                val title = resultSet.getString("title")
+                val description = resultSet.getString("description")
+                val dueDate = resultSet.getDate("dueDate")
+                val priority = resultSet.getInt("priority")
+                val status = resultSet.getString("status")
+                tasks.add(Task(title, description, dueDate, priority, status))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return tasks
+    }
+
+    // Insert task into the database
+    private fun insertTaskToDatabase(task: Task) {
+        val insertSQL = "INSERT INTO tasks(title, description, dueDate, priority, status) VALUES (?, ?, ?, ?, ?)"
+        try {
+            val preparedStatement = connection.prepareStatement(insertSQL)
+            preparedStatement.setString(1, task.title)
+            preparedStatement.setString(2, task.description)
+            preparedStatement.setDate(3, java.sql.Date(task.dueDate.time))
+            preparedStatement.setInt(4, task.priority)
+            preparedStatement.setString(5, task.status)
+            preparedStatement.executeUpdate()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     //displays the list of tasks, if no task has been created, the following message is printed out.
@@ -45,6 +86,7 @@ class TaskManager {
     //modifies task details.
     fun updateTask(index: Int, title: String, description: String, dueDate: Date, priority: Int, status: String) {
         if (index >= 0 && index < tasks.size) { //the function checks if the provided index is within the valid range for the tasks list. It checks if index is greater than or equal to 0 and less than tasks.size, to ensure the index is within the bounds of the list.
+            
             println("Task updated successfully!")
         } else {
             println("Task does not exist")
@@ -75,7 +117,10 @@ class TaskManager {
 }
 
 fun main() {
-    val taskManager = TaskManager() //this line creates an instance of the TaskManager class, which will be used to manage tasks.
+    // Establish a database connection
+    val url = "jdbc:sqlite:TaskManagerData.db" // Assuming your database file is in the project root
+    val connection = DriverManager.getConnection(url)
+    val taskManager = TaskManager(connection) //this line creates an instance of the TaskManager class, which will be used to manage tasks.
 
     while (true) { //this continues running until the user explicitly chooses to exit the program by choosing option 6.
         println("Task Manager Menu. Choose one option below:") //menu is displayed to the user.
@@ -170,4 +215,5 @@ fun main() {
             }
         }
     }
+    connection.close()
 }
