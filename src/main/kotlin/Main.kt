@@ -37,10 +37,14 @@ class TaskManager(private val connection: Connection) {
             while (resultSet.next()) {
                 val title = resultSet.getString("title")
                 val description = resultSet.getString("description")
-                val dueDate = resultSet.getDate("dueDate")
+                val dueDateMillis = resultSet.getLong("dueDate")
                 val priority = resultSet.getInt("priority")
                 val status = resultSet.getString("status")
-                tasks.add(Task(title, description, dueDate, priority, status))
+
+                // Convert the timestamp to a Date object
+                val formattedDueDate = Date(dueDateMillis)
+
+                tasks.add(Task(title, description, formattedDueDate, priority, status))
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -55,10 +59,19 @@ class TaskManager(private val connection: Connection) {
             val preparedStatement = connection.prepareStatement(insertSQL)
             preparedStatement.setString(1, task.title)
             preparedStatement.setString(2, task.description)
-            preparedStatement.setDate(3, java.sql.Date(task.dueDate.time))
+            preparedStatement.setString(3, SimpleDateFormat("yyyy-MM-dd").format(task.dueDate))
             preparedStatement.setInt(4, task.priority)
             preparedStatement.setString(5, task.status)
-            preparedStatement.executeUpdate()
+
+            val rowsAffected = preparedStatement.executeUpdate()
+
+            if (rowsAffected > 0) {
+                println("Task inserted successfully!")
+            } else {
+                println("Task insertion failed.")
+            }
+
+            preparedStatement.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -66,13 +79,15 @@ class TaskManager(private val connection: Connection) {
 
     //displays the list of tasks, if no task has been created, the following message is printed out.
     fun viewTasks() {
-        if (tasks.isEmpty()) {
+        val tasksFromDatabase = retrieveTasksFromDatabase()
+
+        if (tasksFromDatabase.isEmpty()) {
             println()
             println("NO TASKS HAVE BEEN CREATED. CREATE TASKS FIRST!")
             println()
         } else {
-            for ((index, task) in tasks.withIndex()) { //withIndex() is an extension function on lists that pairs each element with its index.
-                println("Task ${index + 1}.") //starts at index 1. to make it more user-friendly.
+            for ((index, task) in tasksFromDatabase.withIndex()) {
+                println("Task ${index + 1}.")
                 println("Title: ${task.title}")
                 println("Description: ${task.description}")
                 println("Due Date: ${task.dueDate}")
@@ -86,7 +101,7 @@ class TaskManager(private val connection: Connection) {
     //modifies task details.
     fun updateTask(index: Int, title: String, description: String, dueDate: Date, priority: Int, status: String) {
         if (index >= 0 && index < tasks.size) { //the function checks if the provided index is within the valid range for the tasks list. It checks if index is greater than or equal to 0 and less than tasks.size, to ensure the index is within the bounds of the list.
-            
+            tasks[index] = Task(title, description, dueDate, priority, status)
             println("Task updated successfully!")
         } else {
             println("Task does not exist")
