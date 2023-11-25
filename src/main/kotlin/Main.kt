@@ -16,8 +16,8 @@ data class Task( //defined data class.
 
 class TaskManager(private val connection: Connection) {
     val tasks = mutableListOf<Task>() //manages a list of tasks using a MutableList.
-
     var taskCreated = false //created to track whether any tasks have been created.
+    var tasksFromDatabase = retrieveTasksFromDatabase()
 
     //adds new task to the list.
     fun createTask(title: String, description: String, dueDate: Date, priority: Int, status: String) {
@@ -27,7 +27,7 @@ class TaskManager(private val connection: Connection) {
         insertTaskToDatabase(task) // Insert the task into the database
     }
 
-    // Retrieve tasks from the database
+    //retrieve tasks from the database.
     private fun retrieveTasksFromDatabase(): List<Task> {
         val tasks = mutableListOf<Task>()
         val selectSQL = "SELECT * FROM tasks"
@@ -41,7 +41,6 @@ class TaskManager(private val connection: Connection) {
                 val priority = resultSet.getInt("priority")
                 val status = resultSet.getString("status")
 
-                // Convert the timestamp to a Date object
                 val formattedDueDate = Date(dueDateMillis)
 
                 tasks.add(Task(title, description, formattedDueDate, priority, status))
@@ -52,14 +51,14 @@ class TaskManager(private val connection: Connection) {
         return tasks
     }
 
-    // Insert task into the database
+    //insert task into the database.
     private fun insertTaskToDatabase(task: Task) {
         val insertSQL = "INSERT INTO tasks(title, description, dueDate, priority, status) VALUES (?, ?, ?, ?, ?)"
         try {
             val preparedStatement = connection.prepareStatement(insertSQL)
             preparedStatement.setString(1, task.title)
             preparedStatement.setString(2, task.description)
-            preparedStatement.setString(3, SimpleDateFormat("yyyy-MM-dd").format(task.dueDate))
+            preparedStatement.setLong(3, task.dueDate.time)
             preparedStatement.setInt(4, task.priority)
             preparedStatement.setString(5, task.status)
 
@@ -86,8 +85,8 @@ class TaskManager(private val connection: Connection) {
             println("NO TASKS HAVE BEEN CREATED. CREATE TASKS FIRST!")
             println()
         } else {
-            for ((index, task) in tasksFromDatabase.withIndex()) {
-                println("Task ${index + 1}.")
+            for ((id, task) in tasksFromDatabase.withIndex()) {
+                println("Task ${id + 1}.")
                 println("Title: ${task.title}")
                 println("Description: ${task.description}")
                 println("Due Date: ${task.dueDate}")
@@ -99,15 +98,16 @@ class TaskManager(private val connection: Connection) {
     }
 
     //modifies task details.
-    fun updateTask(index: Int, title: String, description: String, dueDate: Date, priority: Int, status: String) {
-        if (index >= 0 && index < tasks.size) { //the function checks if the provided index is within the valid range for the tasks list. It checks if index is greater than or equal to 0 and less than tasks.size, to ensure the index is within the bounds of the list.
-            tasks[index] = Task(title, description, dueDate, priority, status)
+    fun updateTask(id: Int, title: String, description: String, dueDate: Date, priority: Int, status: String) {
+        if (id >= 0 && id < tasks.size) { //the function checks if the provided id is within the valid range for the tasks list. It checks if index is greater than or equal to 0 and less than tasks.size, to ensure the index is within the bounds of the list.
+            tasks[id] = Task(title, description, dueDate, priority, status)
             println("Task updated successfully!")
         } else {
             println("Task does not exist")
         }
     }
 
+    //removes tasks from the list by specifying task id.
     //removes tasks from the list by specifying task index.
     fun deleteTask(index: Int) {
         if (index >= 0 && index < tasks.size) {
@@ -118,17 +118,30 @@ class TaskManager(private val connection: Connection) {
         }
     }
 
+
     //sorts task by due dates in ascending order.
     fun sortByDueDate() {
-        if (tasks.isEmpty()) { //if no tasks has been created, the following message is printed out
+        val tasksFromDatabase = retrieveTasksFromDatabase()
+
+        if (tasksFromDatabase.isEmpty()) {
             println()
             println("NO TASKS HAVE BEEN CREATED. CREATE TASKS FIRST!")
             println()
-        } else { //if there are tasks in the list, they are sorted by due date
-            tasks.sortBy { it.dueDate } //this function will sort the tasks in ascending order based on their due dates.
+        } else {
+            val sortedTasks = tasksFromDatabase.sortedBy { it.dueDate }
             println("Tasks sorted by due date:")
+            for ((id, task) in sortedTasks.withIndex()) {
+                println("Task ${id + 1}.")
+                println("Title: ${task.title}")
+                println("Description: ${task.description}")
+                println("Due Date: ${task.dueDate}")
+                println("Priority: ${task.priority}")
+                println("Status: ${task.status}")
+                println()
+            }
         }
     }
+
 }
 
 fun main() {
@@ -158,7 +171,7 @@ fun main() {
                 val dueDateString = readLine() ?: ""
                 val dueDate = SimpleDateFormat("dd-MM-yyyy").parse(dueDateString)
                 print("Priority: ")
-                val priority = readLine()?.toIntOrNull() ?: 0 //coverts string to integer, if string is not valid. If the conversion fails index will be assigned null. Elvis operator provides default value -1
+                val priority = readLine()?.toIntOrNull() ?: 0 //coverts string to integer, if string is not valid. If the conversion fails id will be assigned null. Elvis operator provides default value -1
                 print("Status: ")
                 val status = readLine() ?: ""
                 if (title.isNotBlank() && description.isNotBlank() && dueDate != null) {
@@ -172,10 +185,10 @@ fun main() {
                 taskManager.viewTasks()
             }
             "3" -> { //choice 3 to update task
-                if (taskManager.taskCreated) {
-                    print("Enter the index of the task to update: ")
-                    val index = readLine()?.toIntOrNull() ?: -1
-                    if (index in 1..taskManager.tasks.size) { //in operator checks if the value of index is within the range of valid indices.
+                if (taskManager.tasksFromDatabase.isNotEmpty()) {
+                    print("Enter the id of the task to update: ")
+                    val id = readLine()?.toIntOrNull() ?: -1
+                    if (id in 1..taskManager.tasks.size) { //in operator checks if the value of id is within the range of valid indices.
                         println("Enter task details:")
                         print("Title: ")
                         val title = readLine() ?: ""
@@ -189,12 +202,12 @@ fun main() {
                         print("Status: ")
                         val status = readLine() ?: ""
                         if (title.isNotBlank() && description.isNotBlank() && dueDate != null) {
-                            taskManager.updateTask(index - 1, title, description, dueDate, priority, status)
+                            taskManager.updateTask(id - 1, title, description, dueDate, priority, status)
                         } else {
                             println("Invalid input. Task update failed.")
                         }
                     } else {
-                        println("Invalid index. Task update failed.")
+                        println("Invalid id. Task update failed.")
                     }
                 } else {
                     println()
@@ -203,14 +216,14 @@ fun main() {
                 }
             }
             "4" -> { //choice 4 to delete task
-                if (taskManager.taskCreated) {
-                    print("Enter the index of the task to delete: ")
-                    val index = readLine()?.toIntOrNull() ?: -1
-                    if (index in 1..taskManager.tasks.size) {
-                        taskManager.deleteTask(index - 1) //-1 to set back index starting at 0
+                if (taskManager.tasksFromDatabase.isNotEmpty()) {
+                    print("Enter the id of the task to delete: ")
+                    val id = readLine()?.toIntOrNull() ?: -1
+                    if (id in 1..taskManager.tasks.size) {
+                        taskManager.deleteTask(id - 1) //-1 to set back id starting at 0
                         println("Task deleted successfully!")
                     } else {
-                        println("Invalid index. Task deletion failed.")
+                        println("Invalid id. Task deletion failed.")
                     }
                 } else {
                     println()
@@ -220,7 +233,6 @@ fun main() {
             }
             "5" -> { //choice 5 to sort tasks
                 taskManager.sortByDueDate()
-                taskManager.viewTasks()
             }
             "6" -> { //exit option, it terminates the program
                 return
